@@ -1,0 +1,16 @@
+# Goal
+string mode          # MAP_ONLY | CLEAN_EXISTING_MAP | SLAM_AND_CLEAN
+string power_mode    # ECO | STANDARD | TURBO
+---
+# Result
+int64 SUCCESS=0
+int64 CANCELLED=1
+int64 FAILED=2
+float64 cleaned_area         # m^2
+float64 total_elapsed_time   # seconds
+int64 completion_code
+---
+# Feedback
+string current_room
+float64 completion_percentage
+float64 battery_level

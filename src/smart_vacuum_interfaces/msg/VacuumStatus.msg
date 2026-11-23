@@ -1,0 +1,4 @@
+float64 battery_level
+string dustbin_fullness_status
+bool cliff_state
+bool bumper_state
