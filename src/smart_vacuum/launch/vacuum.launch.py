@@ -6,21 +6,18 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     return LaunchDescription([
-        # Simulated hardware: publishes /vacuum/status telemetry at 1 Hz
         Node(
             package='smart_vacuum',
             executable='hardware_driver',
             name='hardware_driver',
             output='screen',
         ),
-        # Floor configuration service: loads grid map and initial pose
         Node(
             package='smart_vacuum',
             executable='map_loader',
             name='map_loader',
             output='screen',
         ),
-        # Cleaning action server: /vacuum/clean
         Node(
             package='smart_vacuum',
             executable='task_manager',

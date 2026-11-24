@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ROS 301E HW I Report</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: "Liberation Serif", "Times New Roman", serif; font-size: 11pt; line-height: 1.45; color: #111; background: #fff; }
+  h1 { font-size: 20pt; margin: 0 0 4px; }
+  h2 { font-size: 14pt; margin: 22px 0 8px; border-bottom: 1px solid #999; padding-bottom: 3px; break-after: avoid; }
+  h3 { font-size: 12pt; margin: 14px 0 6px; break-after: avoid; }
+  p { margin: 6px 0; text-align: justify; }
+  code { font-family: "DejaVu Sans Mono", monospace; font-size: 9pt; background: #f2f2f2; padding: 0 2px; }
+  pre { font-family: "DejaVu Sans Mono", monospace; font-size: 8.3pt; line-height: 1.35; background: #f6f6f6; border: 1px solid #ddd; border-left: 3px solid #1f6fb2; padding: 7px 9px; margin: 6px 0 10px; white-space: pre-wrap; break-inside: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 12px; font-size: 10pt; break-inside: avoid; }
+  th, td { border: 1px solid #aaa; padding: 4px 6px; text-align: left; vertical-align: top; }
+  th { background: #e9eef5; }
+  td code { font-size: 7.8pt; background: none; padding: 0; }
+  figure { margin: 10px 0 14px; text-align: center; break-inside: avoid; }
+  figure img { max-width: 100%; max-height: 120mm; border: 1px solid #bbb; }
+  figcaption { font-size: 9.5pt; color: #333; margin-top: 4px; }
+  .cover { border: 1px solid #333; padding: 12px 16px; margin-bottom: 18px; }
+  .cover p { margin: 2px 0; text-align: left; }
+  .placeholder { border: 2px dashed #c33; color: #c33; padding: 40px 10px; font-family: sans-serif; }
+  .pb { break-before: page; }
+  ul { margin: 4px 0 8px; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <p><b>ROS 301E – Programming Techniques for Robotics</b></p>
+  <p>Assist. Prof. Dr. Abdurrahman Yilmaz</p>
+  <h1>HW I – ROS 2 Architecture for an Autonomous Home Vacuum Cleaner</h1>
+  <p><b>Student:</b> NAME SURNAME &nbsp;&nbsp; <b>Student ID:</b> 000000000</p>
+  <p><b>GitHub repository:</b> <a href="https://github.com/seymaaozr/ROS301E_HW1">https://github.com/seymaaozr/ROS301E_HW1</a></p>
+  <p><b>Platform:</b> Ubuntu 22.04, ROS 2 Humble, Python (rclpy)</p>
+</div>
+
+<h2>1. System Overview</h2>
+<p>This homework implements a simulated ROS 2 software architecture for an autonomous home vacuum cleaner.
+The system consists of two packages and three nodes, and uses all three core ROS 2 communication patterns:
+a <b>topic</b> for 1 Hz telemetry, a <b>service</b> for floor-level configuration, and an <b>action</b> for long-running
+cleaning sessions with feedback and cancellation.</p>
+
+<table>
+  <tr><th>Pattern</th><th>Name</th><th>Interface type</th><th>Server / Publisher</th></tr>
+  <tr><td>Topic (1 Hz)</td><td><code>/vacuum/status</code></td><td><code>smart_vacuum_interfaces/msg/VacuumStatus</code></td><td><code>hardware_driver</code></td></tr>
+  <tr><td>Service</td><td><code>/vacuum/set_floor_level</code></td><td><code>smart_vacuum_interfaces/srv/SetFloorLevel</code></td><td><code>map_loader</code></td></tr>
+  <tr><td>Action</td><td><code>/vacuum/clean</code></td><td><code>smart_vacuum_interfaces/action/CleaningTask</code></td><td><code>task_manager</code></td></tr>
+</table>
+
+<h2>2. Architecture Block Diagram</h2>
+<figure>
+<svg viewBox="0 0 720 360" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="Liberation Sans, Arial, sans-serif" font-size="12">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#222"/></marker>
+  </defs>
+  <!-- nodes -->
+  <rect x="20" y="30" width="210" height="64" rx="8" fill="#dbe9f7" stroke="#1f6fb2" stroke-width="1.5"/>
+  <text x="125" y="57" text-anchor="middle" font-weight="bold" font-size="14">hardware_driver</text>
+  <text x="125" y="77" text-anchor="middle">Simulated sensors (publisher)</text>
+
+  <rect x="490" y="30" width="210" height="64" rx="8" fill="#dbe9f7" stroke="#1f6fb2" stroke-width="1.5"/>
+  <text x="595" y="57" text-anchor="middle" font-weight="bold" font-size="14">task_manager</text>
+  <text x="595" y="77" text-anchor="middle">Action server + subscriber</text>
+
+  <rect x="490" y="262" width="210" height="64" rx="8" fill="#dbe9f7" stroke="#1f6fb2" stroke-width="1.5"/>
+  <text x="595" y="289" text-anchor="middle" font-weight="bold" font-size="14">map_loader</text>
+  <text x="595" y="309" text-anchor="middle">Service server</text>
+
+  <rect x="20" y="262" width="210" height="64" rx="8" fill="#f3f3f3" stroke="#555" stroke-width="1.5" stroke-dasharray="5 3"/>
+  <text x="125" y="289" text-anchor="middle" font-weight="bold" font-size="14">User / CLI / rqt</text>
+  <text x="125" y="309" text-anchor="middle">ros2 service / action, rqt</text>
+
+  <!-- topic hw -> tm -->
+  <line x1="230" y1="62" x2="488" y2="62" stroke="#222" stroke-width="1.6" marker-end="url(#ar)"/>
+  <text x="359" y="52" text-anchor="middle" font-weight="bold">/vacuum/status</text>
+  <text x="359" y="80" text-anchor="middle">topic · VacuumStatus · 1 Hz</text>
+
+  <!-- topic hw -> rqt -->
+  <line x1="125" y1="94" x2="125" y2="260" stroke="#222" stroke-width="1.6" marker-end="url(#ar)"/>
+  <text x="133" y="170">/vacuum/status</text>
+  <text x="133" y="186">(monitored)</text>
+
+  <!-- service cli <-> map_loader -->
+  <line x1="230" y1="286" x2="488" y2="286" stroke="#b5651d" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+  <line x1="488" y1="304" x2="230" y2="304" stroke="#b5651d" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+  <text x="359" y="278" text-anchor="middle" font-weight="bold" fill="#b5651d">/vacuum/set_floor_level</text>
+  <text x="359" y="322" text-anchor="middle" fill="#b5651d">service · floor_id → success, message</text>
+
+  <!-- action cli <-> task_manager -->
+  <line x1="230" y1="268" x2="500" y2="96" stroke="#2e7d32" stroke-width="2.4" marker-end="url(#ar)"/>
+  <line x1="520" y1="96" x2="250" y2="268" stroke="#2e7d32" stroke-width="2.4" marker-end="url(#ar)"/>
+  <rect x="300" y="150" width="190" height="52" fill="#fff" opacity="0.92"/>
+  <text x="395" y="166" text-anchor="middle" font-weight="bold" fill="#2e7d32">/vacuum/clean (action)</text>
+  <text x="395" y="182" text-anchor="middle" fill="#2e7d32">goal / cancel →</text>
+  <text x="395" y="197" text-anchor="middle" fill="#2e7d32">← feedback / result</text>
+
+  <!-- legend -->
+  <line x1="20" y1="350" x2="50" y2="350" stroke="#222" stroke-width="1.6"/><text x="56" y="354">Topic</text>
+  <line x1="110" y1="350" x2="140" y2="350" stroke="#b5651d" stroke-width="1.6" stroke-dasharray="6 4"/><text x="146" y="354">Service</text>
+  <line x1="210" y1="350" x2="240" y2="350" stroke="#2e7d32" stroke-width="2.4"/><text x="246" y="354">Action</text>
+</svg>
+<figcaption>Figure 1. Architecture block diagram: nodes, topics, services and actions.</figcaption>
+</figure>
+
+<ul>
+  <li><b>hardware_driver</b> simulates the robot hardware and publishes battery level, dustbin status and cliff/bumper sensor states on <code>/vacuum/status</code> every second.</li>
+  <li><b>map_loader</b> provides the <code>/vacuum/set_floor_level</code> service. It loads the grid map of the requested floor into memory and sets the initial pose parameters.</li>
+  <li><b>task_manager</b> provides the <code>/vacuum/clean</code> action. It runs a multi-step cleaning session, streams feedback, returns session statistics and supports cancellation ("Return to Dock"). It also subscribes to <code>/vacuum/status</code> to report the live battery level and to abort the session if the battery is depleted.</li>
+</ul>
+
+<h2>3. Task 1 – ROS 2 Package Setup</h2>
+<p>The workspace contains two packages. Interfaces are kept in a separate <code>ament_cmake</code> package
+(interface generation requires CMake), while the nodes are written in Python in an <code>ament_python</code> package.</p>
+<pre>vacuum_ws/src/
+├── smart_vacuum_interfaces/        # ament_cmake – custom interfaces
+│   ├── msg/VacuumStatus.msg
+│   ├── srv/SetFloorLevel.srv
+│   ├── action/CleaningTask.action
+│   ├── CMakeLists.txt
+│   └── package.xml
+└── smart_vacuum/                   # ament_python – nodes (rclpy)
+    ├── smart_vacuum/hardware_driver.py
+    ├── smart_vacuum/map_loader.py
+    ├── smart_vacuum/task_manager.py
+    ├── launch/vacuum.launch.py
+    ├── package.xml
+    └── setup.py</pre>
+
+<p><b>Interface package</b> – <code>CMakeLists.txt</code> generates the code for all three interface files; <code>package.xml</code> declares
+<code>rosidl_default_generators</code> (build), <code>rosidl_default_runtime</code> (exec), <code>action_msgs</code>, and membership of <code>rosidl_interface_packages</code>.</p>
+<pre>find_package(ament_cmake REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
+find_package(action_msgs REQUIRED)
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/VacuumStatus.msg"
+  "srv/SetFloorLevel.srv"
+  "action/CleaningTask.action"
+  DEPENDENCIES action_msgs
+)</pre>
+
+<p><b>Node package</b> – <code>package.xml</code> declares the dependencies and <code>setup.py</code> registers the three executables and installs the launch file.</p>
+<pre>&lt;depend&gt;rclpy&lt;/depend&gt;
+&lt;depend&gt;std_msgs&lt;/depend&gt;
+&lt;depend&gt;action_msgs&lt;/depend&gt;
+&lt;depend&gt;smart_vacuum_interfaces&lt;/depend&gt;
+&lt;exec_depend&gt;launch&lt;/exec_depend&gt;
+&lt;exec_depend&gt;launch_ros&lt;/exec_depend&gt;</pre>
+<pre>entry_points={
+    'console_scripts': ['hardware_driver = smart_vacuum.hardware_driver:main',
+                        'map_loader = smart_vacuum.map_loader:main',
+                        'task_manager = smart_vacuum.task_manager:main'],
+},</pre>
+
+<h2>4. Task 2 – Custom Interface Definitions</h2>
+<h3>4.1 VacuumStatus.msg (telemetry)</h3>
+<pre>float64 battery_level            # battery charge (%)
+string  dustbin_fullness_status  # "OK" or "FULL"
+bool    cliff_state              # cliff sensor triggered
+bool    bumper_state             # bumper sensor triggered</pre>
+
+<h3>4.2 SetFloorLevel.srv (floor configuration)</h3>
+<pre>string floor_id     # e.g. "Floor_1", "Floor_2", "Floor_3"
+---
+bool   success
+string message      # informative status message</pre>
+
+<h3>4.3 CleaningTask.action (cleaning session)</h3>
+<pre># Goal
+string mode          # MAP_ONLY | CLEAN_EXISTING_MAP | SLAM_AND_CLEAN
+string power_mode    # ECO | STANDARD | TURBO
+---
+# Result
+int64 SUCCESS=0
+int64 CANCELLED=1
+int64 FAILED=2
+float64 cleaned_area         # m^2
+float64 total_elapsed_time   # seconds
+int64 completion_code
+---
+# Feedback
+string current_room
+float64 completion_percentage
+float64 battery_level</pre>
+<p>The completion codes are defined as constants inside the result so that both server and clients use the same values.</p>
+
+<h2>5. Task 3 – Node Implementation</h2>
+
+<h3>5.1 hardware_driver</h3>
+<p>A 1.0 s timer calls <code>publish_status()</code>, which updates the simulated battery (slow drain with a simulated
+recharge on the dock below 5 %) and dustbin level (reported as <code>FULL</code> above 80 %), randomly triggers the cliff and
+bumper sensors, and publishes a <code>VacuumStatus</code> message.</p>
+<pre>self.publisher = self.create_publisher(VacuumStatus, '/vacuum/status', 10)
+self.timer = self.create_timer(1.0, self.publish_status)
+
+def publish_status(self):
+    self.battery = max(0.0, self.battery - random.uniform(0.05, 0.2))
+    if self.battery &lt; LOW_BATTERY_THRESHOLD:
+        self.get_logger().warn('Battery low: simulating recharge on dock')
+        self.battery = 100.0
+    self.dustbin = min(100.0, self.dustbin + random.uniform(0.1, 0.5))
+
+    msg = VacuumStatus()
+    msg.battery_level = self.battery
+    msg.dustbin_fullness_status = (
+        'FULL' if self.dustbin &gt;= DUSTBIN_FULL_THRESHOLD else 'OK')
+    msg.cliff_state = random.random() &lt; 0.05
+    msg.bumper_state = random.random() &lt; 0.05
+    self.publisher.publish(msg)</pre>
+
+<h3>5.2 map_loader</h3>
+<p>Each floor is described by its grid size and initial pose. The service callback validates the floor ID, allocates the
+occupancy grid in memory, updates the <code>initial_pose_x/y/yaw</code> and <code>current_floor</code> parameters with
+<code>set_parameters()</code>, and returns <code>success</code> with an informative message. An unknown floor ID returns
+<code>success=False</code> and lists the valid options.</p>
+<pre>FLOORS = {   # floor_id -> (width, height, x, y, yaw)
+    'Floor_1': (20, 20, 0.0, 0.0, 1.57),
+    'Floor_2': (30, 30, 7.0, 2.0, 1.57),
+    'Floor_3': (40, 40, 2.0, 4.0, 1.57),
+}
+
+def set_floor_level_callback(self, request, response):
+    floor_id = request.floor_id
+    if floor_id not in FLOORS:
+        response.success = False
+        response.message = (
+            f'Invalid floor "{floor_id}". Valid options: {", ".join(FLOORS)}')
+        return response
+
+    width, height, x, y, yaw = FLOORS[floor_id]
+    self.grid_map = [[0] * width for _ in range(height)]   # load grid map
+    self.set_parameters([                                  # set initial pose
+        Parameter('current_floor', value=floor_id),
+        Parameter('initial_pose_x', value=x),
+        Parameter('initial_pose_y', value=y),
+        Parameter('initial_pose_yaw', value=yaw),
+    ])
+    response.success = True
+    response.message = (f'Map for {floor_id} loaded ({width}x{height} grid). '
+                        f'Initial pose set to x={x}, y={y}, yaw={yaw}')
+    return response</pre>
+
+<h3>5.3 task_manager</h3>
+<p>The action server uses a <code>ReentrantCallbackGroup</code> with a <code>MultiThreadedExecutor</code>, so that cancel
+requests and <code>/vacuum/status</code> messages are processed while the long-running execute callback is active.
+The <b>goal callback</b> rejects unknown modes or power modes. The <b>cancel callback</b> accepts every cancel request ("Return to Dock").</p>
+<pre>self.action_server = ActionServer(
+    self, CleaningTask, '/vacuum/clean',
+    execute_callback=self.execute_callback,
+    goal_callback=self.goal_callback,
+    cancel_callback=self.cancel_callback,
+    callback_group=self.callback_group)
+
+def goal_callback(self, goal_request):
+    if goal_request.mode not in MODE_DURATION:
+        return GoalResponse.REJECT
+    if goal_request.power_mode not in POWER_SPEED:
+        return GoalResponse.REJECT
+    return GoalResponse.ACCEPT
+
+def cancel_callback(self, goal_handle):
+    self.get_logger().info('Received cancel request (Return to Dock)')
+    return CancelResponse.ACCEPT</pre>
+
+<p>The <b>execute callback</b> divides the session into 0.5 s steps. The duration depends on the mode
+(MAP_ONLY 5 s, CLEAN_EXISTING_MAP 10 s, SLAM_AND_CLEAN 15 s) and the cleaning rate depends on the power mode
+(ECO 0.5, STANDARD 1.0, TURBO 1.5 m²/s; MAP_ONLY does not clean). In every step it first checks for a cancel request
+or depleted battery, then publishes feedback with the current room, completion percentage and battery level.
+At the end it returns the cleaned area, elapsed time and completion code.</p>
+<pre>for i in range(steps):
+    if goal_handle.is_cancel_requested:
+        goal_handle.canceled()
+        self.get_logger().info('Task canceled, returning to dock')
+        return self.make_result(cleaned_area, start_time,
+                                CleaningTask.Result.CANCELLED)
+    if self.battery_level &lt;= 0.0:
+        goal_handle.abort()
+        return self.make_result(cleaned_area, start_time,
+                                CleaningTask.Result.FAILED)
+
+    time.sleep(STEP_PERIOD)
+    if cleans:
+        cleaned_area += speed * STEP_PERIOD
+
+    feedback.current_room = ROOMS[i * len(ROOMS) // steps]
+    feedback.completion_percentage = (i + 1) / steps * 100.0
+    feedback.battery_level = self.battery_level
+    goal_handle.publish_feedback(feedback)
+
+goal_handle.succeed()
+return self.make_result(cleaned_area, start_time, CleaningTask.Result.SUCCESS)</pre>
+
+<h3>5.4 Launch file</h3>
+<p><code>vacuum.launch.py</code> starts all three nodes together:
+<code>ros2 launch smart_vacuum vacuum.launch.py</code>.</p>
+
+<h2 class="pb">6. Demonstration &amp; Verification</h2>
+<p>All steps were run after <code>colcon build</code> and <code>source install/setup.bash</code>, with the full system
+started by the launch file.</p>
+
+<h3>V1 – System Graph Verification (rqt_graph)</h3>
+<figure>
+  <img src="img/v1_rqt_graph.png" alt="rqt_graph">
+  <figcaption>Figure 2. rqt_graph of the running system (Nodes/Topics (all), Actions enabled, no hidden elements).</figcaption>
+</figure>
+<p>The graph shows the three nodes <code>/hardware_driver</code>, <code>/map_loader</code> and <code>/task_manager</code>.
+<code>/hardware_driver</code> publishes <code>/vacuum/status</code>, which is subscribed by <code>/task_manager</code>
+(and by the rqt / ros2 CLI monitoring nodes). <code>/task_manager</code> publishes the action topics
+<code>/vacuum/clean/_action/feedback</code> and <code>/vacuum/clean/_action/status</code>, which confirms that the
+<code>/vacuum/clean</code> action server is running. All application interfaces are grouped under the <code>/vacuum</code>
+namespace, as required. Note that rqt_graph in ROS 2 only draws topics, so the <code>/vacuum/set_floor_level</code>
+service does not appear as an edge; the service is verified in V3. The <code>/_ros2cli_*</code> and
+<code>/rqt_gui_py_node_*</code> nodes belong to the command-line and rqt tools used during the demonstration.</p>
+
+<h3>V2 – Live Telemetry Monitoring (rqt_topic)</h3>
+<figure>
+  <img src="img/v2_topic_monitor.png" alt="rqt Topic Monitor">
+  <figcaption>Figure 3. rqt Topic Monitor showing live <code>/vacuum/status</code> messages at 1.00 Hz.</figcaption>
+</figure>
+<p>The Topic Monitor plugin of rqt shows the <code>/vacuum/status</code> topic of type
+<code>smart_vacuum_interfaces/msg/VacuumStatus</code> with all four fields: <code>battery_level</code>,
+<code>dustbin_fullness_status</code> ('OK'), <code>cliff_state</code> and <code>bumper_state</code>. The values update live
+and the measured publishing rate is 1.00 Hz.</p>
+<figure>
+  <img src="img/v2_topic_hz.png" alt="ros2 topic hz" style="max-height:45mm">
+  <figcaption>Figure 4. <code>ros2 topic hz /vacuum/status</code> confirms an average rate of 1.000 Hz.</figcaption>
+</figure>
+
+<h3>V3 – Service Call Verification</h3>
+<pre>ros2 service call /vacuum/set_floor_level smart_vacuum_interfaces/srv/SetFloorLevel "{floor_id: 'Floor_2'}"</pre>
+<figure>
+  <img src="img/v3_service_call.png" alt="service call">
+  <figcaption>Figure 5. Service call (bottom) and the map_loader log in the launch terminal (top).</figcaption>
+</figure>
+<p>The service returns <code>success=True</code> with the message
+<i>"Map for Floor_2 loaded (30x30 grid). Initial pose set to x=7.0, y=2.0, yaw=1.57"</i>.
+The launch terminal shows the corresponding <code>map_loader</code> logs, <i>"Loaded grid map for Floor_2: 30x30 cells"</i>
+and <i>"Initial pose set to x=7.0, y=2.0, yaw=1.57"</i>, which confirms that the map was loaded and the initial pose
+parameters were set. Meanwhile, the <code>hardware_driver</code> keeps publishing telemetry every second.</p>
+
+<h3>V4 – Action Execution &amp; Cancellation</h3>
+<pre>ros2 action send_goal --feedback /vacuum/clean smart_vacuum_interfaces/action/CleaningTask \
+  "{mode: 'SLAM_AND_CLEAN', power_mode: 'TURBO'}"</pre>
+<figure>
+  <img src="img/v4_feedback.png" alt="action feedback">
+  <figcaption>Figure 6. Goal accepted and intermediate feedback received from the task manager.</figcaption>
+</figure>
+<p>The goal is accepted by the task manager and intermediate feedback is received every 0.5 s, containing the
+current room (<i>Living Room</i>), the completion percentage (3.3 %, 6.7 %, 10.0 %, …) and the live battery level
+taken from <code>/vacuum/status</code>.</p>
+
+<!--V4_CANCEL_START-->
+<div class="placeholder">[V4 cancellation screenshot missing – save it as report/img/v4_cancel.png and run build.sh]</div>
+<!--V4_CANCEL_END-->
+<p>While feedback is streaming, pressing <b>Ctrl+C</b> in the <code>send_goal</code> terminal sends a cancel request
+(<i>"Canceling goal..."</i>). The task manager logs <i>"Received cancel request (Return to Dock)"</i> and
+<i>"Task canceled, returning to dock"</i>, stops the session at the next step and returns the partial statistics
+(<code>cleaned_area</code>, <code>total_elapsed_time</code>) with <code>completion_code: 1</code> (CANCELLED).
+The client reports <i>"Goal finished with status: CANCELED"</i>, which demonstrates graceful abort behavior. The system
+keeps running and accepts new goals afterwards.</p>
+
+<h2>7. Conclusion</h2>
+<p>A complete ROS 2 architecture for an autonomous home vacuum cleaner was designed and implemented with custom
+message, service and action interfaces. The verification steps show that telemetry is published at 1 Hz, the floor
+configuration service loads the selected map and sets the initial pose, and the cleaning action provides live
+feedback, returns session statistics and can be cancelled gracefully. The full source code and build/run instructions
+are available at <a href="https://github.com/seymaaozr/ROS301E_HW1">https://github.com/seymaaozr/ROS301E_HW1</a>.</p>
+
+</body>
+</html>

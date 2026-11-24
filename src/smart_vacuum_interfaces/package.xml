@@ -4,7 +4,7 @@
   <name>smart_vacuum_interfaces</name>
   <version>0.0.0</version>
   <description>Custom msg, srv and action definitions for the smart vacuum cleaner.</description>
-  <maintainer email="seymink@todo.todo">seymink</maintainer>
+  <maintainer email="seymaozer5454@gmail.com">Şeyma Özer</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

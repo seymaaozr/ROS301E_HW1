@@ -18,8 +18,8 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='seymink',
-    maintainer_email='seymink@todo.todo',
+    maintainer='Şeyma Özer',
+    maintainer_email='seymaozer5454@gmail.com',
     description='Nodes for a simulated autonomous home vacuum cleaner',
     license='Apache-2.0',
     extras_require={

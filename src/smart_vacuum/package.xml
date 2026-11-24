@@ -4,7 +4,7 @@
   <name>smart_vacuum</name>
   <version>0.0.0</version>
   <description>Nodes (hardware driver, map loader, task manager) for a simulated autonomous home vacuum cleaner.</description>
-  <maintainer email="seymink@todo.todo">seymink</maintainer>
+  <maintainer email="seymaozer5454@gmail.com">seymink</maintainer>
   <license>Apache-2.0</license>
 
   <depend>rclpy</depend>
